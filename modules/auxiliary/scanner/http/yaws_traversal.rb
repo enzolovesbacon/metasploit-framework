@@ -1,8 +1,8 @@
 ##
 # This file is part of the Metasploit Framework and may be subject to
 # redistribution and commercial restrictions. Please see the Metasploit
-# Framework web site for more information on licensing and terms of use.
-# http://metasploit.com/framework/
+# web site for more information on licensing and terms of use.
+#   http://metasploit.com/
 ##
 
 require 'msf/core'
@@ -30,6 +30,7 @@ class Metasploit3 < Msf::Auxiliary
 			'References'     =>
 				[
 					['CVE', '2011-4350'],
+					['OSVDB', '77581'],
 					['URL', 'https://bugzilla.redhat.com/show_bug.cgi?id=757181']
 				],
 			'DisclosureDate' => "Nov 25 2011"

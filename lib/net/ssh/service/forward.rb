@@ -1,3 +1,4 @@
+# -*- coding: binary -*-
 require 'net/ssh/loggable'
 
 module Net; module SSH; module Service
@@ -214,6 +215,10 @@ module Net; module SSH; module Service
           session.stop_listening_to(ch[:socket])
         end
 
+        channel.on_eof do |ch|
+          ch.close
+        end
+
         channel.on_process do |ch|
           if ch[:socket].closed?
             ch.info { "#{type} forwarded connection closed" }
@@ -245,11 +250,11 @@ module Net; module SSH; module Service
           'PeerHost' => remote.host,
           'PeerPort' => remote.port,
           'Context'  => {
-             'Msf'        => options[:msframework],
-             'MsfExploit' => options[:msfmodule]
+             'Msf'        => session.options[:msframework],
+             'MsfExploit' => session.options[:msfmodule]
           }
         )
-        options[:msfmodule].add_socket(client) if options[:msfmodule]
+        session.options[:msfmodule].add_socket(client) if session.options[:msfmodule]
 
         info { "connected #{connected_address}:#{connected_port} originator #{originator_address}:#{originator_port}" }
 

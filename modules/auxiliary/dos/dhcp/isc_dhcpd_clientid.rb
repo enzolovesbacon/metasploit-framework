@@ -5,8 +5,8 @@
 ##
 # This file is part of the Metasploit Framework and may be subject to
 # redistribution and commercial restrictions. Please see the Metasploit
-# Framework web site for more information on licensing and terms of use.
-# http://metasploit.com/framework/
+# web site for more information on licensing and terms of use.
+#   http://metasploit.com/
 ##
 
 require 'msf/core'
@@ -29,7 +29,7 @@ class Metasploit3 < Msf::Auxiliary
 			'Author'        =>
 					[
 						'sid', # Original POC
-						'TheLightCosine <thelightcosine@gmail.com>' # msf module
+						'TheLightCosine <thelightcosine[at]gmail.com>' # msf module
 					],
 			'License'       => MSF_LICENSE,
 			'Version'       => '$Revision$',
@@ -37,7 +37,7 @@ class Metasploit3 < Msf::Auxiliary
 				[
 					[ 'CVE', '2010-2156' ],
 					[ 'OSVDB', '65246'],
-					[ 'URL', 'http://www.exploit-db.com/exploits/14185/']
+					[ 'EDB', 14185]
 				]
 		)
 		register_options(

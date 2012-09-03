@@ -1,3 +1,4 @@
+# -*- coding: binary -*-
 # $Id$
 #
 # TFTP Server implementation according to:
@@ -10,3 +11,4 @@
 
 require 'rex/proto/tftp/constants'
 require 'rex/proto/tftp/server'
+require 'rex/proto/tftp/client'

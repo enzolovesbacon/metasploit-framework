@@ -5,8 +5,8 @@
 ##
 # This file is part of the Metasploit Framework and may be subject to
 # redistribution and commercial restrictions. Please see the Metasploit
-# Framework web site for more information on licensing and terms of use.
-# http://metasploit.com/framework/
+# web site for more information on licensing and terms of use.
+#   http://metasploit.com/
 ##
 
 
@@ -27,7 +27,7 @@ class Metasploit3 < Msf::Auxiliary
 					This module extracts the usernames and encrypted password
 				hashes from a Postgres server and stores them for later cracking.
 			},
-			'Author'         => ['TheLightCosine <thelightcosine[at]gmail.com>'],
+			'Author'         => ['TheLightCosine <thelightcosine[at]metasploit.com>'],
 			'License'        => MSF_LICENSE
 		)
 		register_options([
@@ -50,7 +50,7 @@ class Metasploit3 < Msf::Auxiliary
 		when :sql_error
 			case res[:sql_error]
 			when /^C42501/
-				print_error "#{datastore['RHOST']}:#{datastore['RPORT']} Postgres - Insufficent permissions."
+				print_error "#{datastore['RHOST']}:#{datastore['RPORT']} Postgres - Insufficient permissions."
 				return
 			else
 				print_error "#{datastore['RHOST']}:#{datastore['RPORT']} Postgres - #{res[:sql_error]}"
@@ -100,4 +100,3 @@ class Metasploit3 < Msf::Auxiliary
 
 
 end
-

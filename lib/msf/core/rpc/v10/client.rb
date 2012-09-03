@@ -1,3 +1,4 @@
+# -*- coding: binary -*-
 require 'xmlrpc/client'
 require 'msgpack'
 
@@ -71,7 +72,7 @@ class Client
 			resp = MessagePack.unpack(res.body)
 
 			if resp and resp.kind_of?(::Hash) and resp['error'] == true
-				raise Msf::RPC::ServerException.new(res.code, resp['error_message'] || resp['error_string'], resp['error_class'], resp['error_backtrace'])
+				raise Msf::RPC::ServerException.new(resp['error_code'] || res.code, resp['error_message'] || resp['error_string'], resp['error_class'], resp['error_backtrace'])
 			end
 
 			return resp
