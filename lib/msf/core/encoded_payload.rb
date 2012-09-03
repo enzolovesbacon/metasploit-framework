@@ -1,3 +1,4 @@
+# -*- coding: binary -*-
 # $Id$
 
 require 'msf/core'
@@ -107,6 +108,10 @@ class EncodedPayload
 		if reqs['BadChars'] or reqs['Encoder'] or reqs['ForceEncode']
 			encoders = pinst.compatible_encoders
 
+			# Fix encoding issue
+			if reqs['Encoder']
+				reqs['Encoder'] = reqs['Encoder'].encode(framework.encoders.keys[0].encoding)
+			end
 			# If the caller had a preferred encoder, use this encoder only
 			if ((reqs['Encoder']) and (preferred = framework.encoders[reqs['Encoder']]))
 				encoders = [ [reqs['Encoder'], preferred] ]
@@ -140,6 +145,9 @@ class EncodedPayload
 						'core', LEV_1)
 					next
 				end
+				
+				# Import the datastore from payload (and likely exploit by proxy)
+				self.encoder.share_datastore(pinst.datastore)
 
 				# If we have any encoder options, import them into the datastore
 				# of the encoder.
@@ -266,6 +274,9 @@ class EncodedPayload
 			nops.each { |nopname, nopmod|
 				# Create an instance of the nop module
 				self.nop = nopmod.new
+				
+				# Propagate options from the payload and possibly exploit
+				self.nop.share_datastore(pinst.datastore)
 
 				# The list of save registers
 				save_regs = (reqs['SaveRegisters'] || []) + (pinst.save_registers || [])
@@ -323,6 +334,9 @@ class EncodedPayload
 		emod = pinst.assoc_exploit if pinst.respond_to? :assoc_exploit
 
 		if emod
+			if (emod.datastore["EXE::Custom"] and emod.respond_to? :get_custom_exe)
+				return emod.get_custom_exe
+			end
 			# This is a little ghetto, grabbing datastore options from the
 			# associated exploit, but it doesn't really make sense for the
 			# payload to have exe options if the exploit doesn't need an exe.

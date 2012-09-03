@@ -1,3 +1,4 @@
+# -*- coding: binary -*-
 require 'msf/core'
 require 'msf/base'
 require 'msf/ui'
@@ -139,7 +140,6 @@ class Driver < Msf::Ui::Driver
 			print_error("***")
 		end
 
-
 		begin
 			require 'openssl'
 		rescue ::LoadError
@@ -155,12 +155,6 @@ class Driver < Msf::Ui::Driver
 		# Re-enable output
 		self.disable_output = false
 
-		# Load additional modules as necessary
-		self.framework.modules.add_module_path(opts['ModulePath'], false) if opts['ModulePath']
-
-		# Load console-specific configuration
-		load_config(opts['Config'])
-
 		# Whether or not command passthru should be allowed
 		self.command_passthru = (opts['AllowCommandPassthru'] == false) ? false : true
 
@@ -174,6 +168,12 @@ class Driver < Msf::Ui::Driver
 
 		# Parse any specified database.yml file
 		if framework.db.usable and not opts['SkipDatabaseInit']
+		
+			# Append any migration paths necessary to bring the database online
+			if opts['DatabaseMigrationPaths']
+				opts['DatabaseMigrationPaths'].each {|m| framework.db.add_migration_path(m) }
+			end
+		
 			# Look for our database configuration in the following places, in order:
 			#	command line arguments
 			#	environment variable
@@ -193,12 +193,49 @@ class Driver < Msf::Ui::Driver
 					print_error("No database definition for environment #{dbenv}")
 				else
 					if not framework.db.connect(db)
+						if framework.db.error.to_s =~ /RubyGem version.*pg.*0\.11/i
+							print_error("***")
+							print_error("*")
+							print_error("* Metasploit now requires version 0.11 or higher of the 'pg' gem for database support")
+							print_error("* There a three ways to accomplish this upgrade:")
+							print_error("* 1. If you run Metasploit with your system ruby, simply upgrade the gem:")
+							print_error("*    $ rvmsudo gem install pg ")
+							print_error("* 2. Use the Community Edition web interface to apply a Software Update")
+							print_error("* 3. Uninstall, download the latest version, and reinstall Metasploit")
+							print_error("*")
+							print_error("***")
+							print_error("")
+							print_error("")
+						end
+
 						print_error("Failed to connect to the database: #{framework.db.error} #{db.inspect} #{framework.db.error.backtrace}")
+					else
+						self.framework.modules.refresh_cache
+						if self.framework.modules.cache.keys.length == 0
+							print_status("The initial module cache will be built in the background, this can take 2-5 minutes...")
+						end
 					end
 				end
 			end
 		end
 
+		# Initialize the module paths only if we didn't get passed a Framework instance
+		unless opts['Framework']
+			# Configure the framework module paths
+			self.framework.init_module_paths
+			self.framework.modules.add_module_path(opts['ModulePath']) if opts['ModulePath']
+
+			# Rebuild the module cache in a background thread
+			self.framework.threads.spawn("ModuleCacheRebuild", true) do
+				self.framework.cache_thread = Thread.current
+				self.framework.modules.rebuild_cache
+				self.framework.cache_initialized = true
+				self.framework.cache_thread = nil
+			end
+		end
+
+		# Load console-specific configuration (after module paths are added)
+		load_config(opts['Config'])
 
 		# Process things before we actually display the prompt and get rocking
 		on_startup(opts)
@@ -224,6 +261,9 @@ class Driver < Msf::Ui::Driver
 		@junit_output_path = output_path
 		@junit_error_count = 0
 		print_status("Test Output: #{output_path}")
+
+		# We need at least one test success in order to pass
+		junit_pass("framework_loaded")
 	end
 
 	#
@@ -250,8 +290,8 @@ class Driver < Msf::Ui::Driver
 		c << f
 		e << c
 
-		bname = ( ::File.basename(self.active_resource || "msfrpc") + "_" + tname ).gsub(/[^A-Za-z0-9\.\_]/, '')
-		bname << "_" + Digest::MD5.hexdigest(ftype)
+		bname = ("msfrpc_#{tname}").gsub(/[^A-Za-z0-9\.\_]/, '')
+		bname << "_" + Digest::MD5.hexdigest(tname)
 
 		fname = ::File.join(@junit_output_path, "#{bname}.xml")
 		cnt   = 0
@@ -266,6 +306,43 @@ class Driver < Msf::Ui::Driver
 
 		print_error("Test Error: #{tname} - #{ftype} - #{data}")
 	end
+	
+	#
+	# Emit a new jUnit XML output file representing a success
+	#
+	def junit_pass(tname)
+
+		if not @junit_output_path
+			raise RuntimeError, "No output path, call junit_setup() first"
+		end
+
+		# Generate the structure of a test case run
+		e = REXML::Element.new("testsuite")
+		c = REXML::Element.new("testcase")
+		c.attributes["classname"] = "msfrc"
+		c.attributes["name"]  = tname
+		e << c
+
+		# Generate a unique name
+		bname = ("msfrpc_#{tname}").gsub(/[^A-Za-z0-9\.\_]/, '')
+		bname << "_" + Digest::MD5.hexdigest(tname)
+
+		# Generate the output path, allow multiple test with the same name
+		fname = ::File.join(@junit_output_path, "#{bname}.xml")
+		cnt   = 0
+		while ::File.exists?( fname )
+			cnt  += 1
+			fname = ::File.join(@junit_output_path, "#{bname}_#{cnt}.xml")
+		end
+
+		# Write to our test output location, as specified with junit_setup
+		::File.open(fname, "w") do |fd|
+			fd.write(e.to_s)
+		end
+
+		print_good("Test Pass: #{tname}")
+	end
+
 
 	#
 	# Emit a jUnit XML output file and throw a fatal exception
